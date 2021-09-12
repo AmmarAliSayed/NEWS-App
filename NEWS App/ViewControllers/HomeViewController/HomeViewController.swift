@@ -12,7 +12,8 @@ import SwiftyGif
 
 
 class HomeViewController: UIViewController {
-    var allNews = [News]()
+    var orginalArticles = [News]()
+    private var articles:[News]?
     var newsViewModel = NewsViewModel()
     var bookmarkNewsViewModel : BookmarkNewsViewModel?
     let logoAnimationView = LogoAnimationView()
@@ -21,13 +22,19 @@ class HomeViewController: UIViewController {
     var isSearching = false
     
     @IBOutlet weak var tableView: UITableView!
+    @IBOutlet weak var searchBar: UISearchBar!
   //  @IBOutlet weak var searchBar: UISearchBar!
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
+      //  tableView.rowHeight = UITableView.automaticDimension
+       // tableView.estimatedRowHeight = 300
+        articles = [News]()
         tableView.delegate = self
         tableView.dataSource = self
-       
+        searchBar.delegate = self
+        searchBar.searchTextField.delegate = self
+        
         newsViewModel.bindNewsViewModelToView = {
                     self.onSuccessUpdateView()
                 }
@@ -60,7 +67,8 @@ class HomeViewController: UIViewController {
     }
     //MARK: - helper functions
     func onSuccessUpdateView(){
-        allNews = newsViewModel.newsData.articles
+        orginalArticles = newsViewModel.newsData.articles
+        articles = newsViewModel.newsData.articles
         self.tableView.reloadData()
     }
     func onFailUpdateView(){
@@ -111,7 +119,7 @@ extension HomeViewController : UITableViewDelegate , UITableViewDataSource {
 
      func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
-        return allNews.count
+        return articles?.count ?? 0
     }
 
     
@@ -133,22 +141,22 @@ extension HomeViewController : UITableViewDelegate , UITableViewDataSource {
         cell.containerView.layer.masksToBounds = false
         cell.containerView.clipsToBounds = false
        
-        cell.newsTitleLabel.text = allNews[indexPath.row].title
+        cell.newsTitleLabel.text = articles?[indexPath.row].title ?? ""
         
-        if let image = self.allNews[indexPath.row].urlToImage {
-            cell.newsImageView.sd_setImage(with: URL(string: (image)), placeholderImage: UIImage(named: "placeholderAsset"))
+        if let image = self.articles?[indexPath.row].urlToImage {
+            cell.newsImageView.sd_setImage(with: URL(string: (image)), placeholderImage: UIImage(named: "noimg"))
         }
         cell.delegate = self
         cell.addIndex(index: indexPath.row)
         return cell
     }
     
-     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 250
-    }
+//     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+//        return 250
+//    }
      func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        var websiteUrl = allNews[indexPath.row].url ?? ""
+        var websiteUrl = articles?[indexPath.row].url ?? ""
     
         guard let url = URL(string: websiteUrl) else { return }
         
@@ -164,9 +172,9 @@ extension HomeViewController : UITableViewDelegate , UITableViewDataSource {
 extension HomeViewController :NewsCellDelegate{
     func addNewsToBookmark(index: Int) {
        // print(allNews[index].title!)
-        var title = allNews[index].title ?? ""
-        var image = allNews[index].urlToImage ?? ""
-        var newsLink = allNews[index].url ?? ""
+        var title = articles?[index].title ?? ""
+        var image = articles?[index].urlToImage ?? ""
+        var newsLink = articles?[index].url ?? ""
         bookmarkNewsViewModel?.callFuncToAddNewsToCoreData(title: title, img: image, newsLink: newsLink)
        
     }
@@ -178,5 +186,16 @@ extension HomeViewController: SwiftyGifDelegate {
     func gifDidStop(sender: UIImageView) {
         logoAnimationView.isHidden = true
         self.tabBarController?.tabBar.isHidden = false
+    }
+}
+extension HomeViewController : UISearchBarDelegate {
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        articles = newsViewModel.search(articles: orginalArticles , searchText: searchText)
+        tableView.reloadData()
+    }
+}
+extension HomeViewController: UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        return textField.endEditing(true)
     }
 }

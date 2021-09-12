@@ -62,4 +62,10 @@ class NewsViewModel: NSObject {
             }
         }
     }
+    func search(articles:[News],searchText:String)->[News]{
+        return searchText.isEmpty ? articles : articles.filter({
+            (data:News)->Bool in
+            return data.title?.range(of: searchText, options: .caseInsensitive) != nil
+        })
+    }
 }
